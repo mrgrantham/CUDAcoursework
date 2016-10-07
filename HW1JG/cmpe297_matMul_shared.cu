@@ -175,6 +175,7 @@ main(void)
     unsigned long long* d_runtime;
     int r_size = WIDTH*WIDTH*sizeof(unsigned long long);
     unsigned long long* runtime = (unsigned long long*)malloc(r_size);
+    
     memset(runtime, 0, r_size);
     cudaMalloc((void**)&d_runtime, r_size);
 #endif
