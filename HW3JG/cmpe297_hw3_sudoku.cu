@@ -55,37 +55,33 @@ __global__ void k_Sudoku(stContext *context)
     printf("starting thread x: %d y: %d",col,row);
     // TODO: Insert Your Code Here
         // Execution finishes when all the entries in the matrix have 1 value
-    __shared__ int finished;
-    finished = 0;
-    __syncthreads();
+//    __shared__ int finished;
+//    finished = 0;
 
-    while(!finished) {
-        finished = 1;
-        if(context->num_options[row][col] > 1) {
-            // Find values that are not in the row, col, and the
-            // 3x3 cell that (row, col) is belonged to.
-            int value = 0, temp;
-            context->num_options[row][col] = 0;
-            for(int k = 0; k < 9; k++) {
-                temp = IS_OPTION(row, col, k);
-                if(temp == 1) {  
-                    context->num_options[row][col]++;
-                    value = k;
-                }
-            }
-            // If the above loop found only one value,
-            // set the value to (row, col)
-            if(context->num_options[row][col] == 1) {
-                context->not_in_row[row][value] = 0;
-                context->not_in_col[col][value] = 0;
-                context->not_in_cell[(row)/3+((col)/3)*3][value] = 0;
-                context->val[row][col] = value+1;
+    while(context->num_options[row][col] > 1) {
+        // Find values that are not in the row, col, and the
+        // 3x3 cell that (row, col) is belonged to.
+        int value = 0, temp;
+        context->num_options[row][col] = 0;
+        for(int k = 0; k < 9; k++) {
+            temp = IS_OPTION(row, col, k);
+            if(temp == 1) {  
+                context->num_options[row][col]++;
+                value = k;
             }
         }
+        // If the above loop found only one value,
+        // set the value to (row, col)
+        if(context->num_options[row][col] == 1) {
+            context->not_in_row[row][value] = 0;
+            context->not_in_col[col][value] = 0;
+            context->not_in_cell[(row)/3+((col)/3)*3][value] = 0;
+            context->val[row][col] = value+1;
+        }
         printf("running loop with thread x: %d y: %d finished? %d\n",col,row,context->num_options[row][col]);
-        finished &= context->num_options[row][col];
-        __syncthreads();
+    //    finished = context->num_options[row][col];
     }
+    
 }
 
 int main(int argc, char **argv)
@@ -104,18 +100,19 @@ int main(int argc, char **argv)
         fprintf(stderr, "Failed to allocate device data (error code %s)!\n", cudaGetErrorString(err));
         exit(EXIT_FAILURE);
     }
+    printf("starting cudaMemcpy()\n");
     err = cudaMemcpy(k_context,&context,sizeof(stContext),cudaMemcpyHostToDevice);
     if (err != cudaSuccess)
     {
         fprintf(stderr, "Failed to copy data from host to device (error code %s)!\n", cudaGetErrorString(err));
         exit(EXIT_FAILURE);
     }
-
+    printf("ending cudaMemcpy()\n");
     // Assign as many threads as the matrix size so that
     // each thread can deal with one entry of the matrix
     dim3 dimBlock(WIDTH, WIDTH, 1);
     dim3 dimGrid(1, 1, 1);
-
+    printf("start kernel\n");
     // TODO: Call the kernel function
     k_Sudoku<<<dimGrid,dimBlock>>>(k_context);
     err = cudaGetLastError();
@@ -124,15 +121,21 @@ int main(int argc, char **argv)
         fprintf(stderr, "Kernel execution failed (error code %s)\n", cudaGetErrorString(err));
         exit(EXIT_FAILURE);
     }
+    printf("end kernel\n");
     cudaThreadSynchronize();
 
+    printf("end cudaThreadSynchronize\n");
+
     // TODO: Copy the result matrix from the GPU device memory
+    printf("copy memory back to context structure on host\n");
     err = cudaMemcpy(&context,k_context,sizeof(stContext),cudaMemcpyDeviceToHost);
     if (err != cudaSuccess)
     {
         fprintf(stderr, "Failed to copy data from device to host (error code %s)!\n", cudaGetErrorString(err));
         exit(EXIT_FAILURE);
     }
+    printf("done copying\n");
+
     cudaThreadSynchronize();
 	
     // Print the result
