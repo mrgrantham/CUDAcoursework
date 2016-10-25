@@ -52,7 +52,7 @@ __global__ void k_Sudoku(stContext *context)
     const unsigned int col = threadIdx.x;
     const unsigned int row = threadIdx.y;
     
-    printf("starting thread x: %d y: %d",col,row);
+    //printf("starting thread x: %d y: %d",col,row);
     // TODO: Insert Your Code Here
         // Execution finishes when all the entries in the matrix have 1 value
 //    __shared__ int finished;
@@ -78,8 +78,6 @@ __global__ void k_Sudoku(stContext *context)
             context->not_in_cell[(row)/3+((col)/3)*3][value] = 0;
             context->val[row][col] = value+1;
         }
-        printf("running loop with thread x: %d y: %d finished? %d\n",col,row,context->num_options[row][col]);
-    //    finished = context->num_options[row][col];
     }
     
 }
@@ -92,27 +90,22 @@ int main(int argc, char **argv)
     print_all();
 
     stContext *k_context;
-    printf("mallocing to CUDA\n");	
     err = cudaMalloc((void**)&k_context,sizeof(stContext));
-    printf("done with malloc\n");
     if (err != cudaSuccess)
     {
         fprintf(stderr, "Failed to allocate device data (error code %s)!\n", cudaGetErrorString(err));
         exit(EXIT_FAILURE);
     }
-    printf("starting cudaMemcpy()\n");
     err = cudaMemcpy(k_context,&context,sizeof(stContext),cudaMemcpyHostToDevice);
     if (err != cudaSuccess)
     {
         fprintf(stderr, "Failed to copy data from host to device (error code %s)!\n", cudaGetErrorString(err));
         exit(EXIT_FAILURE);
     }
-    printf("ending cudaMemcpy()\n");
     // Assign as many threads as the matrix size so that
     // each thread can deal with one entry of the matrix
     dim3 dimBlock(WIDTH, WIDTH, 1);
     dim3 dimGrid(1, 1, 1);
-    printf("start kernel\n");
     // TODO: Call the kernel function
     k_Sudoku<<<dimGrid,dimBlock>>>(k_context);
     err = cudaGetLastError();
@@ -121,10 +114,8 @@ int main(int argc, char **argv)
         fprintf(stderr, "Kernel execution failed (error code %s)\n", cudaGetErrorString(err));
         exit(EXIT_FAILURE);
     }
-    printf("end kernel\n");
     cudaThreadSynchronize();
 
-    printf("end cudaThreadSynchronize\n");
 
     // TODO: Copy the result matrix from the GPU device memory
     printf("copy memory back to context structure on host\n");
